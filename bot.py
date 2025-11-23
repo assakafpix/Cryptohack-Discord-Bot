@@ -14,6 +14,7 @@ import asyncio
 
 import database as db
 from cryptohack_api import fetch_user, UserNotFoundError, CryptoHackAPIError
+from keep_alive import keep_alive
 from image_generator import generate_solve_image
 
 load_dotenv()
@@ -21,6 +22,9 @@ load_dotenv()
 # Bot configuration
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL_MINUTES", "10"))
+
+# Start the keep-alive server
+keep_alive()
 
 # Bot setup with required intents
 intents = discord.Intents.default()
