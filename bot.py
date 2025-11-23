@@ -22,9 +22,6 @@ load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL_MINUTES", "10"))
 
-# Start the keep-alive server
-keep_alive()
-
 # Bot setup with required intents
 intents = discord.Intents.default()
 intents.guilds = True
@@ -468,6 +465,32 @@ async def set_channel(interaction: discord.Interaction, channel: discord.TextCha
     await interaction.response.send_message(
         f"✅ Solve announcements will now be posted in {channel.mention}"
     )
+
+
+@bot.tree.command(name="test", description="Test image generation")
+async def test_image(interaction: discord.Interaction):
+    """Test image generation with assakaf user."""
+    await interaction.response.defer()
+
+    try:
+        user_data = await fetch_user("assakaf", bot.session)
+
+        image_bytes = await generate_solve_image(
+            username="assakaf",
+            score=user_data.score,
+            challenge_name="Test Challenge",
+            category="Introduction",
+            points=10,
+            server_rank=1,
+            total_solvers=0,
+            is_first_blood=True,
+            session=bot.session
+        )
+
+        file = discord.File(image_bytes, filename="test_solve.png")
+        await interaction.followup.send("Test image:", file=file)
+    except Exception as e:
+        await interaction.followup.send(f"Error: {e}")
 
 
 @bot.tree.command(name="refresh", description="Manually check for new solves")
