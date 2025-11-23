@@ -62,6 +62,7 @@ class CryptoHackBot(commands.Bot):
         for guild_id in guild_ids:
             guild = self.get_guild(guild_id)
             if not guild:
+                print(f"[SKIP] Guild {guild_id} not found (bot may have been removed)")
                 continue
 
             tracked_users = await db.get_tracked_users(guild_id)
@@ -77,7 +78,10 @@ class CryptoHackBot(commands.Bot):
                 await asyncio.sleep(1)
 
             # Announce new solves for this guild
-            await self._announce_new_solves(guild)
+            try:
+                await self._announce_new_solves(guild)
+            except Exception as e:
+                print(f"Error announcing solves for {guild.name}: {e}")
 
     async def _check_user_solves(self, guild_id: int, username: str):
         """Check for new solves by a specific user."""
@@ -169,8 +173,11 @@ class CryptoHackBot(commands.Bot):
                     guild.id, solve["cryptohack_username"], solve["challenge_name"]
                 )
             except discord.Forbidden:
-                print(f"Cannot send to channel {channel.name} in {guild.name}")
-                break
+                print(f"Cannot send to channel {channel.name} in {guild.name} - marking as announced")
+                await db.mark_challenge_announced(
+                    guild.id, solve["cryptohack_username"], solve["challenge_name"]
+                )
+                continue
             except Exception as e:
                 print(f"Error announcing solve: {e}")
                 # Mark as announced anyway to avoid spam on errors
