@@ -113,34 +113,43 @@ class CryptoHackBot(commands.Bot):
 
     async def _announce_new_solves(self, guild: discord.Guild):
         """Announce new solves in the designated channel."""
+        print(f"[DEBUG] _announce_new_solves called for guild {guild.name} (id: {guild.id})")
         unannounced = await db.get_unannounced_solves(guild.id)
+        print(f"[DEBUG] Found {len(unannounced)} unannounced solves")
         if not unannounced:
             return
 
         # Get announcement channel
         channel_id = await db.get_announcement_channel(guild.id)
+        print(f"[DEBUG] Channel ID from DB: {channel_id}")
         channel = None
 
         if channel_id:
             # Try cache first, then fetch from API
             channel = guild.get_channel(channel_id)
+            print(f"[DEBUG] Channel from cache: {channel}")
             if not channel:
                 try:
                     channel = await self.fetch_channel(channel_id)
-                except Exception:
-                    pass
+                    print(f"[DEBUG] Channel from fetch: {channel}")
+                except Exception as e:
+                    print(f"[DEBUG] Failed to fetch channel: {e}")
 
         if not channel:
             # Try to find a channel named "cryptohack"
             channel = discord.utils.get(guild.text_channels, name="cryptohack")
+            print(f"[DEBUG] Channel from name search: {channel}")
 
         if not channel:
             # Fall back to system channel
             channel = guild.system_channel
+            print(f"[DEBUG] System channel: {channel}")
 
         if not channel:
             print(f"[ERROR] No channel found for guild {guild.name} (id: {guild.id})")
             return
+
+        print(f"[DEBUG] Will send to channel: {channel.name} (id: {channel.id})")
 
         # Announce each solve with an image
         for solve in unannounced:
@@ -545,7 +554,9 @@ async def refresh(interaction: discord.Interaction):
         await asyncio.sleep(0.5)
 
     if new_solves > 0:
+        print(f"[DEBUG] Refresh: Found {new_solves} new solves, calling _announce_new_solves")
         await bot._announce_new_solves(interaction.guild)
+        print(f"[DEBUG] Refresh: _announce_new_solves completed")
         await interaction.followup.send(f"✅ Found and announced {new_solves} new solve(s)!")
     else:
         await interaction.followup.send("No new solves found.")
