@@ -113,43 +113,31 @@ class CryptoHackBot(commands.Bot):
 
     async def _announce_new_solves(self, guild: discord.Guild):
         """Announce new solves in the designated channel."""
-        print(f"[DEBUG] _announce_new_solves called for guild {guild.name} (id: {guild.id})")
         unannounced = await db.get_unannounced_solves(guild.id)
-        print(f"[DEBUG] Found {len(unannounced)} unannounced solves")
         if not unannounced:
             return
 
-        # Get announcement channel
+        # Get announcement channel - try multiple methods
         channel_id = await db.get_announcement_channel(guild.id)
-        print(f"[DEBUG] Channel ID from DB: {channel_id}")
         channel = None
 
         if channel_id:
-            # Try cache first, then fetch from API
-            channel = guild.get_channel(channel_id)
-            print(f"[DEBUG] Channel from cache: {channel}")
-            if not channel:
-                try:
-                    channel = await self.fetch_channel(channel_id)
-                    print(f"[DEBUG] Channel from fetch: {channel}")
-                except Exception as e:
-                    print(f"[DEBUG] Failed to fetch channel: {e}")
+            try:
+                channel = await self.fetch_channel(channel_id)
+            except Exception:
+                channel = guild.get_channel(channel_id)
 
         if not channel:
-            # Try to find a channel named "cryptohack"
             channel = discord.utils.get(guild.text_channels, name="cryptohack")
-            print(f"[DEBUG] Channel from name search: {channel}")
 
         if not channel:
-            # Fall back to system channel
             channel = guild.system_channel
-            print(f"[DEBUG] System channel: {channel}")
 
         if not channel:
-            print(f"[ERROR] No channel found for guild {guild.name} (id: {guild.id})")
+            # Mark all as announced to avoid infinite retries
+            for solve in unannounced:
+                await db.mark_challenge_announced(guild.id, solve["cryptohack_username"], solve["challenge_name"])
             return
-
-        print(f"[DEBUG] Will send to channel: {channel.name} (id: {channel.id})")
 
         # Announce each solve with an image
         for solve in unannounced:
@@ -519,7 +507,7 @@ async def test_image(interaction: discord.Interaction):
 @bot.tree.command(name="refresh", description="Manually check for new solves")
 @app_commands.default_permissions(manage_guild=True)
 async def refresh(interaction: discord.Interaction):
-    """Manually trigger a check for new solves."""
+    """Manually trigger a check for new solves and post images here."""
     await interaction.response.defer()
 
     tracked = await db.get_tracked_users(interaction.guild_id)
@@ -528,7 +516,8 @@ async def refresh(interaction: discord.Interaction):
         await interaction.followup.send("No users are being tracked.")
         return
 
-    new_solves = 0
+    # Collect new solves
+    new_solves_data = []
     for user_data in tracked:
         try:
             user = await fetch_user(user_data["username"], bot.session)
@@ -548,18 +537,53 @@ async def refresh(interaction: discord.Interaction):
                         solved_date=challenge.date,
                         first_blood=is_first
                     )
-                    new_solves += 1
-        except Exception:
+                    new_solves_data.append({
+                        "username": user_data["username"],
+                        "challenge_name": challenge.name,
+                        "category": challenge.category,
+                        "points": challenge.points,
+                        "first_blood": is_first,
+                        "score": user.score
+                    })
+        except Exception as e:
+            print(f"Error checking {user_data['username']}: {e}")
             continue
         await asyncio.sleep(0.5)
 
-    if new_solves > 0:
-        print(f"[DEBUG] Refresh: Found {new_solves} new solves, calling _announce_new_solves")
-        await bot._announce_new_solves(interaction.guild)
-        print(f"[DEBUG] Refresh: _announce_new_solves completed")
-        await interaction.followup.send(f"✅ Found and announced {new_solves} new solve(s)!")
-    else:
+    if not new_solves_data:
         await interaction.followup.send("No new solves found.")
+        return
+
+    # Send images directly in this channel
+    await interaction.followup.send(f"Found {len(new_solves_data)} new solve(s):")
+
+    for solve in new_solves_data:
+        try:
+            server_solvers = await db.get_challenge_solvers(interaction.guild_id, solve["challenge_name"])
+            server_rank = len(server_solvers)
+
+            image_bytes = await generate_solve_image(
+                username=solve["username"],
+                score=solve["score"],
+                challenge_name=solve["challenge_name"],
+                category=solve["category"],
+                points=solve["points"],
+                server_rank=server_rank,
+                total_solvers=0,
+                is_first_blood=solve["first_blood"],
+                session=bot.session
+            )
+
+            file = discord.File(image_bytes, filename="solve.png")
+            await interaction.channel.send(file=file)
+
+            # Mark as announced
+            await db.mark_challenge_announced(
+                interaction.guild_id, solve["username"], solve["challenge_name"]
+            )
+        except Exception as e:
+            print(f"Error generating image for {solve['challenge_name']}: {e}")
+            await interaction.channel.send(f"Error generating image for {solve['challenge_name']}: {e}")
 
 
 # ============= Run Bot =============
