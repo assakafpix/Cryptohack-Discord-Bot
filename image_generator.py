@@ -158,18 +158,21 @@ async def generate_solve_image(
 
     # Font sizes
     TITLE_SIZE = 48
-    USERNAME_SIZE = 36
-    SCORE_SIZE = 30
+    USERNAME_SIZE = 32   # -4
+    SCORE_SIZE = 22      # -8
     CHALLENGE_SIZE = 34
-    POINTS_SIZE = 32
+    POINTS_SIZE = 28     # -4
     CATEGORY_SIZE = 28
     RANK_SIZE = 26
     LOGO_TEXT_SIZE = 26
 
+    # Margins
+    MARGIN_X = 40
+
     # === TITLE (top left) - JEFITH ===
     title_text = "NOUVEAU CHALLENGE VALIDÉ"
     title_font = get_jefith_font(TITLE_SIZE)
-    draw.text((25, 12), title_text, font=title_font, fill=TITLE_COLOR)
+    draw.text((MARGIN_X, 12), title_text, font=title_font, fill=TITLE_COLOR)
 
     # === FIRST BLOOD ICON ===
     if is_first_blood and FIRSTBLOOD_IMAGE_PATH.exists():
@@ -177,7 +180,7 @@ async def generate_solve_image(
             fb_icon = Image.open(FIRSTBLOOD_IMAGE_PATH).convert("RGBA")
             fb_icon = fb_icon.resize((45, 45), Image.Resampling.LANCZOS)
             title_width = draw.textlength(title_text, font=title_font)
-            img.paste(fb_icon, (int(25 + title_width + 12), 8), fb_icon)
+            img.paste(fb_icon, (int(MARGIN_X + title_width + 12), 8), fb_icon)
         except Exception:
             pass
 
@@ -185,7 +188,7 @@ async def generate_solve_image(
     logo_text = "CRYPTOHACK"
     logo_text_font = get_jefith_font(LOGO_TEXT_SIZE)
     logo_text_width = draw.textlength(logo_text, font=logo_text_font)
-    draw.text((IMAGE_WIDTH - logo_text_width - 20, 18), logo_text, font=logo_text_font, fill=LOGO_TEXT_COLOR)
+    draw.text((IMAGE_WIDTH - logo_text_width - MARGIN_X, 18), logo_text, font=logo_text_font, fill=LOGO_TEXT_COLOR)
 
     # === CRYPTOHACK LOGO (bottom right) ===
     if LOGO_IMAGE_PATH.exists():
@@ -193,13 +196,13 @@ async def generate_solve_image(
             logo = Image.open(LOGO_IMAGE_PATH).convert("RGBA")
             logo_size = 50
             logo = logo.resize((logo_size, logo_size), Image.Resampling.LANCZOS)
-            img.paste(logo, (IMAGE_WIDTH - logo_size - 15, IMAGE_HEIGHT - logo_size - 10), logo)
+            img.paste(logo, (IMAGE_WIDTH - logo_size - MARGIN_X, IMAGE_HEIGHT - logo_size - 10), logo)
         except Exception:
             pass
 
     # === AVATAR ===
     avatar_size = 90
-    avatar_x = 25
+    avatar_x = MARGIN_X
     avatar_y = 60
 
     avatar_img = None
@@ -236,12 +239,12 @@ async def generate_solve_image(
     challenge_y = 155
     challenge_font = get_oswald_medium_font(CHALLENGE_SIZE)
     challenge_text = challenge_name.upper()
-    draw.text((25, challenge_y), challenge_text, font=challenge_font, fill=CHALLENGE_COLOR)
+    draw.text((MARGIN_X, challenge_y), challenge_text, font=challenge_font, fill=CHALLENGE_COLOR)
 
     # === POINTS - OSWALD MEDIUM ===
     points_font = get_oswald_light_font(POINTS_SIZE)
     challenge_width = draw.textlength(challenge_text, font=challenge_font)
-    draw.text((25 + challenge_width + 15, challenge_y + 2), f"{points} POINTS", font=points_font, fill=POINTS_COLOR)
+    draw.text((MARGIN_X + challenge_width + 15, challenge_y + 4), f"{points} POINTS", font=points_font, fill=POINTS_COLOR)
 
     # === CATEGORY WITH ICON - OSWALD LIGHT ===
     category_y = challenge_y + 42
@@ -252,10 +255,10 @@ async def generate_solve_image(
     if category_icon:
         category_icon = category_icon.resize((icon_size, icon_size), Image.Resampling.LANCZOS)
         # Align icon bottom with text baseline
-        img.paste(category_icon, (25, category_y + 7), category_icon)
-        draw.text((25 + icon_size + 10, category_y + 3), category.upper(), font=category_font, fill=CATEGORY_COLOR)
+        img.paste(category_icon, (MARGIN_X, category_y + 7), category_icon)
+        draw.text((MARGIN_X + icon_size + 10, category_y + 3), category.upper(), font=category_font, fill=CATEGORY_COLOR)
     else:
-        draw.text((25, category_y), category.upper(), font=category_font, fill=CATEGORY_COLOR)
+        draw.text((MARGIN_X, category_y), category.upper(), font=category_font, fill=CATEGORY_COLOR)
 
     # === SERVER RANK (lowercase) - OSWALD LIGHT ===
     rank_y = category_y + 36
@@ -268,7 +271,7 @@ async def generate_solve_image(
     else:
         rank_text = f"{server_rank}ème du serveur"
 
-    draw.text((25, rank_y), rank_text, font=rank_font, fill=SUBTITLE_COLOR)
+    draw.text((MARGIN_X, rank_y), rank_text, font=rank_font, fill=SUBTITLE_COLOR)
 
     # Convert to bytes
     output = io.BytesIO()

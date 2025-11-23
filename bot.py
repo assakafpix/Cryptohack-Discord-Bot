@@ -14,7 +14,6 @@ import asyncio
 
 import database as db
 from cryptohack_api import fetch_user, UserNotFoundError, CryptoHackAPIError
-from keep_alive import keep_alive
 from image_generator import generate_solve_image
 
 load_dotenv()

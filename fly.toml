@@ -1,0 +1,18 @@
+# fly.toml - Fly.io configuration for CryptoHack Discord Bot
+
+app = "cryptohack-discord-bot"
+primary_region = "cdg"  # Paris
+
+[build]
+  builder = "paketobuildpacks/builder:base"
+
+[env]
+  CHECK_INTERVAL_MINUTES = "10"
+
+[processes]
+  app = "python bot.py"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256
