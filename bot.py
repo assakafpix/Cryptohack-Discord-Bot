@@ -118,7 +118,13 @@ class CryptoHackBot(commands.Bot):
         channel = None
 
         if channel_id:
+            # Try cache first, then fetch from API
             channel = guild.get_channel(channel_id)
+            if not channel:
+                try:
+                    channel = await self.fetch_channel(channel_id)
+                except Exception:
+                    pass
 
         if not channel:
             # Try to find a channel named "cryptohack"
@@ -129,6 +135,7 @@ class CryptoHackBot(commands.Bot):
             channel = guild.system_channel
 
         if not channel:
+            print(f"[ERROR] No channel found for guild {guild.name} (id: {guild.id})")
             return
 
         # Announce each solve with an image
